@@ -1,0 +1,66 @@
+name: Build ShelemYar
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Test and build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate platform projects
+        run: flutter create --project-name shelemyar --platforms=android,windows .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Run tests
+        run: flutter test
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShelemYar-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  windows:
+    name: Test and build Windows release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate platform projects
+        shell: pwsh
+        run: flutter create --project-name shelemyar --platforms=android,windows .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Run tests
+        run: flutter test
+      - name: Build Windows release
+        run: flutter build windows --release
+      - name: Package Windows release
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ShelemYar-Windows.zip
+      - name: Upload Windows release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShelemYar-Windows
+          path: ShelemYar-Windows.zip
+          if-no-files-found: error
